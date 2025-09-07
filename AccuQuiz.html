@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>AccuQuiz — Polished Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#6a5cff; --bg2:#3bb0ff;
+  --white: #ffffff; --muted:#7b86aa; --ink:#0e1330;
+  --card:#ffffff; --glass: rgba(255,255,255,0.18);
+  --accent:#7c4dff; --ok:#1ecb9a; --err:#ff6b6b;
+  --radius:16px; --shadow: 0 12px 30px rgba(10,12,40,.14);
+}
+*{box-sizing:border-box}
+html,body{height:100%; margin:0; font-family:Inter,system-ui,Arial,sans-serif; -webkit-font-smoothing:antialiased;}
+body{display:grid; place-items:center; background:#e6ebff}
+
+/* PHONE FRAME */
+.phone{
+  width:390px; height:780px; border-radius:38px; overflow:hidden;
+  background:linear-gradient(160deg,var(--bg1),var(--bg2));
+  border:12px solid #0f1220; box-shadow: 0 40px 80px rgba(10,12,40,.25);
+  position:relative;
+}
+.phone::before{
+  content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:160px; height:28px; background:#0f1220; border-bottom-left-radius:14px; border-bottom-right-radius:14px;
+}
+.homebar{position:absolute; bottom:8px; left:50%; transform:translateX(-50%); width:120px; height:5px; background:#151826; border-radius:6px; opacity:.95}
+
+/* GLOBAL SCREEN LAYOUT */
+.screen{position:absolute; inset:0; display:none; padding:64px 18px 36px; overflow:auto; color:var(--ink);}
+.screen.active{display:block; animation:fadeIn .28s ease}
+@keyframes fadeIn { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+.topbar{position:absolute; top:34px; left:14px; right:14px; display:flex; align-items:center; gap:8px; z-index:5}
+.iconbtn{width:40px; height:40px; display:grid; place-items:center; border-radius:12px; background:var(--glass); border:1px solid rgba(255,255,255,.45); cursor:pointer}
+.titleCenter{flex:1; text-align:center; color:#fff; font-weight:700}
+
+/* REUSABLE UI */
+.center{display:grid; place-items:center; gap:14px; text-align:center}
+.logo{width:94px; height:94px; border-radius:20px; background:linear-gradient(180deg,#fff,#f2f6ff); display:grid; place-items:center; box-shadow:var(--shadow)}
+.logo img{max-width:72%; max-height:72%}
+.h1{color:#fff; font-size:18px;}
+.hint{color:rgba(255,255,255,.9); font-size:13px}
+.card{background:var(--card); border-radius:16px; padding:14px; box-shadow:var(--shadow)}
+.input{width:100%; padding:12px 14px; border-radius:12px; border:1px solid #e5e8ff; outline:none; font-size:14px}
+.btn{background:linear-gradient(160deg,var(--accent),#4d74ff); color:#fff; border:none; padding:12px 14px; border-radius:12px; font-weight:700; cursor:pointer; box-shadow:0 10px 22px rgba(70,60,180,.18)}
+.btn.secondary{background:#fff; color:#3d49a5; font-weight:700; box-shadow:none; border:1px solid rgba(12,18,60,.06)}
+.small{font-size:13px; color:var(--muted)}
+.row{display:flex; gap:8px; align-items:center}
+
+/* HOME: folders + feature tiles */
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.folder{background:linear-gradient(180deg,#ffffff,#f4f6ff); border-radius:12px; padding:10px; text-align:center; font-weight:700; color:#2b3560; box-shadow:0 10px 20px rgba(20,24,80,.06); cursor:pointer; transition: transform .15s}
+.folder:active{transform:scale(.98)}
+.feature{display:flex; align-items:center; gap:12px; background:#fff; border-radius:14px; padding:12px; margin-top:12px; box-shadow:var(--shadow); cursor:pointer}
+.promo{margin-top:14px; background:linear-gradient(140deg,#7c4dff,#3bb0ff); color:#fff; border-radius:14px; padding:12px; display:flex; align-items:center; gap:12px; box-shadow:0 14px 30px rgba(60,40,160,.18)}
+
+/* FLASHCARDS */
+.flashWrap{display:flex; flex-direction:column; align-items:center; gap:14px}
+.flashcard{width:82%; max-width:300px; height:190px; perspective:1100px}
+.flash-inner {
+  width:100%; height:100%;
+  transition: transform .66s cubic-bezier(.2,.9,.2,1);
+  transform-style:preserve-3d; position:relative
+}
+.flashcard.flipped .flash-inner {
+  transform:rotateY(180deg)
+}
+.face{position:absolute; inset:0; border-radius:16px; display:grid; place-items:center; padding:18px; backface-visibility:hidden; box-shadow:0 18px 40px rgba(10,12,40,.12)}
+.face.front{background:#fff; color:#10132a; font-size:15px; line-height:1.45}
+.face.back{background:linear-gradient(160deg,#7c4dff,#4d74ff); color:#fff; font-size:18px; font-weight:800; transform:rotateY(180deg)}
+
+/* small controls under flash */
+.controls{display:flex; gap:10px; margin-top:6px}
+.iconTiny{width:36px; height:36px; border-radius:10px; display:grid; place-items:center; background:rgba(255,255,255,.9); cursor:pointer}
+
+/* QUIZ */
+.qbubble{background:#fff; border-radius:14px; padding:14px; box-shadow:var(--shadow); text-align:left}
+.kicker{font-size:12px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.6px}
+.qtext{margin-top:8px; font-size:16px; font-weight:700}
+.options{display:grid; gap:10px; margin-top:12px}
+.opt{background:#fff; border-radius:12px; padding:12px; border:1.2px solid #eef1ff; cursor:pointer; font-weight:700; transition: transform .12s, box-shadow .12s}
+.opt:hover{transform:translateY(-3px); box-shadow:0 10px 18px rgba(20,24,80,.06)}
+.opt.correct{background:linear-gradient(90deg,#eafff6,#dffbf0); border-color:rgba(30,203,154,.12)}
+.opt.wrong{background:linear-gradient(90deg,#ffecec,#fff0f0); border-color:rgba(255,107,107,.12)}
+.explain{font-size:13px; color:var(--muted); margin-top:10px}
+
+/* progress */
+.progress{height:10px; background:rgba(255,255,255,.12); border-radius:999px; margin-top:12px; overflow:hidden}
+.bar{height:100%; width:0%; background:linear-gradient(90deg,#56e0b7,#34c6ff); transition:width .28s}
+
+/* PROFILE */
+.profileCard{background:#fff; border-radius:14px; padding:14px; box-shadow:var(--shadow); margin-top:10px}
+
+/* utilities */
+.centerText{text-align:center}
+.mt10{margin-top:10px}
+.smallMuted{font-size:13px; color:var(--muted)}
+.footerNote{font-size:12px; color:rgba(255,255,255,.85); margin-top:12px}
+
+/* accessibility focus */
+:focus-visible{outline:3px solid rgba(88,142,255,.28); outline-offset:3px; border-radius:8px}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+  <div class="topbar" style="pointer-events:none">
+    <!-- decorative top area left blank; active bars per screen added inside each screen when needed -->
+  </div>
+
+  <!-- ========== WELCOME ========== -->
+  <section id="welcome" class="screen active">
+    <div class="center" style="margin-top:40px">
+      <div class="logo" aria-hidden="true">
+        <!-- Replace with your logo file -->
+        <img src="your-logo.png" alt="AccuQuiz Logo">
+        <span style="font-weight:800; color:#6a5cff; font-size:15px">AccuQuiz</span>
+      </div>
+      <div class="h1">Master your numbers, one question at a time.</div>
+      <div class="hint">White · Purple · Blue · Soft Gradient prototype</div>
+
+      <div style="width:86%; margin-top:14px">
+        <button class="btn" onclick="handleGo('login')">Start</button>
+        <div class="mt10"><a href="#" class="small" onclick="help()">Need Help?</a></div>
+      </div>
+
+      <div class="footerNote">Prototype — interactive demo</div>
+    </div>
+  </section>
+
+  <!-- ========== LOGIN ========== -->
+  <section id="login" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="titleCenter">Welcome to AccuQuiz</div>
+      <div style="width:40px"></div>
+    </div>
+
+    <div style="margin-top:64px; padding:6px 6px 0">
+      <div class="card">
+        <div style="display:grid; gap:10px">
+          <input id="loginName" class="input" placeholder="Enter your name" aria-label="Name">
+          <div class="row" style="justify-content:space-between">
+            <a href="#" class="small" onclick="help()">Need Help?</a>
+            <a href="#" class="small" onclick="alert('Password reset link (demo)')">Forget Password?</a>
+          </div>
+          <button class="btn" onclick="login()">Enter</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SIGNUP ========== -->
+  <section id="signup" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="titleCenter">Create Account</div>
+      <div style="width:40px"></div>
+    </div>
+
+    <div style="margin-top:64px; padding:6px">
+      <div class="card">
+        <div style="display:grid; gap:10px">
+          <input id="suName" class="input" placeholder="Name" aria-label="Signup Name">
+          <input id="suEmail" class="input" placeholder="Email" aria-label="Signup Email">
+          <input id="suPass" class="input" type="password" placeholder="Password" aria-label="Signup Password">
+          <button class="btn" onclick="signup()">Sign up</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== HOME ========== -->
+  <section id="home" class="screen">
+    <div class="topbar">
+      <div style="width:40px"></div>
+      <div class="titleCenter">Home</div>
+      <div style="width:40px"></div>
+    </div>
+
+    <div style="margin-top:58px; padding:0 6px">
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div>
+          <div style="font-weight:800; color:#111">Hi, <span id="userNameDisplay">Guest</span></div>
+          <div class="smallMuted">Welcome back to AccuQuiz</div>
+        </div>
+        <div style="display:flex; gap:8px">
+          <div class="iconbtn" title="Profile" onclick="handleGo('profile')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zM3 21a9 9 0 0118 0" stroke="#1a1f2e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="iconbtn" title="Sign out" onclick="doSignOut()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M16 17l5-5-5-5M21 12H9" stroke="#1a1f2e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="grid3" aria-hidden="false">
+        <div class="folder" onclick="handleGo('author')">
+          <div style="display:flex; flex-direction:column; align-items:center;">
+            <img src="your-photo.jpg" alt="John Louie Rimando" style="width:48px; height:48px; border-radius:12px; margin-bottom:6px;">
+            <span>Author</span>
+          </div>
+        </div>
+        <div class="folder" onclick="handleGo('folder2info')">
+          <div style="display:flex; flex-direction:column; align-items:center;">
+            <span>About</span>
+            <span class="smallMuted" style="font-size:12px;">MOCKUP ACCOUNTING ACTIVITY</span>
+          </div>
+        </div>
+        <div class="folder" onclick="tapFolder(3)">Assets</div>
+      </div>
+
+      <div class="feature" onclick="handleGo('quiz')">
+        <div style="font-size:20px">📝</div>
+        <div>
+          <div style="font-weight:800">Quizzes</div>
+          <div class="small">Multiple choice</div>
+        </div>
+      </div>
+
+      <div class="feature" onclick="handleGo('flash')">
+        <div style="font-size:20px">🃏</div>
+        <div>
+          <div style="font-weight:800">FlashCards</div>
+          <div class="small">Play and Take Time</div>
+        </div>
+      </div>
+
+      
+      <div class="feature" onclick="handleGo('budget')">
+        <div style="font-size:20px">💰</div>
+        <div>
+          <div style="font-weight:800">Budget Tracker</div>
+          <div class="small">Income & Expenses</div>
+        </div>
+      </div>
+
+      <div class="feature" onclick="handleGo('savings')">
+        <div style="font-size:20px">🏆</div>
+        <div>
+          <div style="font-weight:800">Savings Goal</div>
+          <div class="small">Track Progress</div>
+        </div>
+      </div>
+
+      <div class="feature" onclick="handleGo('tips')">
+        <div style="font-size:20px">💡</div>
+        <div>
+          <div style="font-weight:800">Tips & Facts</div>
+          <div class="small">Smart Advice</div>
+        </div>
+      </div>
+
+<div class="promo" onclick="alert('Promo: Join demo promo!')">
+        <div style="font-size:22px">🏦</div>
+        <div style="flex:1">
+          <div style="font-weight:800">Saving Account</div>
+          <div class="small">Get Amazing Doorprize</div>
+        </div>
+        <div><button class="btn secondary">Join</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FLASHCARDS ========== -->
+  <section id="flash" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="titleCenter">FlashCards</div>
+      <div style="width:40px"></div>
+    </div>
+
+    <div style="margin-top:60px" class="flashWrap">
+      <div class="flashcard" id="flashCard" tabindex="0">
+        <div class="flash-inner" id="flashInner">
+          <div class="face front" id="flashFront"></div>
+          <div class="face back" id="flashBack"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn secondary" onclick="prevCard()" title="Previous">⬅ Prev</button>
+        <button class="btn" onclick="flipCard()" title="Flip">Flip</button>
+        <button class="btn secondary" onclick="nextCard()" title="Next">Next ➡</button>
+        <div style="width:8px"></div>
+        <div class="iconTiny" title="Shuffle" onclick="shuffleDeck()">🔀</div>
+      </div>
+
+      <div style="color:#fff; font-weight:600" id="flashProgress">Card 1 of 3</div>
+    </div>
+  </section>
+
+  <!-- ========== QUIZ (Polished & Prototype-style) ========== -->
+  <section id="quiz" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="titleCenter">Quiz — Multiple choice</div>
+      <div style="width:40px"></div>
+    </div>
+
+    <div style="margin-top:60px; padding:0 6px">
+      <div class="qbubble">
+        <div class="kicker">Question <span id="qIndex">1</span> / <span id="qTotal">0</span></div>
+        <div class="qtext" id="qText">Question text</div>
+      </div>
+
+      <div class="options" id="options" aria-live="polite"></div>
+
+      <div class="progress"><div id="bar" class="bar"></div></div>
+
+      <div style="display:flex; justify-content:space-between; margin-top:12px">
+        <button class="btn secondary" onclick="restartQuiz()">Restart</button>
+        <div style="display:flex; gap:8px">
+          <button class="btn secondary" id="explainToggle" onclick="toggleExplain()" title="Show explanation">💡 Explain</button>
+          <button class="btn" id="nextBtn" onclick="next()">Next</button>
+        </div>
+      </div>
+
+      <div class="explain" id="explain" style="display:none"></div>
+      <div style="text-align:center; margin-top:10px"><span id="scoreLine" class="smallMuted"></span></div>
+    </div>
+  </section>
+
+  <!-- ========== PROFILE / PROGRESS ========== -->
+  <section id="profile" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      <div class="titleCenter">Profile</div>
+      <div style="width:40px"></div>
+    </div>
+
+    <div style="margin-top:64px; padding:0 6px">
+      <div class="profileCard">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <div>
+            <div style="font-weight:800; font-size:16px" id="profileName">Guest</div>
+            <div class="smallMuted">Keep learning — small steps build mastery</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:800; color:#4d74ff" id="profileScore">0</div>
+            <div class="smallMuted">best quiz</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="font-weight:700">Flashcards studied</div>
+          <div style="font-size:14px; margin-top:6px"><span id="flashStudied">0</span> cards</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="font-weight:700">Learning streak (days)</div>
+          <div style="font-size:14px; margin-top:6px" id="streak">0</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; display:flex; gap:8px">
+        <button class="btn" onclick="resetProgress()">Clear progress</button>
+        <button class="btn secondary" onclick="handleGo('home')">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== AUTHOR ========== -->
+  <section id="author" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="titleCenter">John Louie Rimando</div>
+      <div style="width:40px"></div>
+    </div>
+    <div style="margin-top:64px; padding:0 6px">
+      <div class="profileCard center">
+        <div class="logo" style="width:110px; height:110px;">
+          <!-- Add your photo here -->
+          <img src="your-photo.jpg" alt="John Louie Rimando" style="width:80px; height:80px;">
+        
+      </div>
+      <div style="margin-top:18px; display:flex; gap:8px; justify-content:center;">
+        <button class="btn secondary" onclick="handleGo('home')">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOLDER 2 INFO (NEW SECTION) ========== -->
+  <section id="folder2info" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="titleCenter">MOCKUP ACCOUNTING ACTIVITY</div>
+      <div style="width:40px"></div>
+    </div>
+    <div style="margin-top:64px; padding:0 6px">
+      <div class="profileCard center">
+        <div style="font-weight:800; font-size:18px; margin-bottom:8px;">MOCKUP ACCOUNTING ACTIVITY</div>
+        <div class="smallMuted">Section: BS INFO TECH 3A</div>
+        <div class="smallMuted">Subject: ITPE 105</div>
+        <div class="smallMuted">Teacher: Maricel Parrocha</div>
+      </div>
+      <div style="margin-top:18px; display:flex; gap:8px; justify-content:center;">
+        <button class="btn secondary" onclick="handleGo('home')">Back</button>
+      </div>
+    </div>
+  </section>
+
+  
+  <!-- ========== BUDGET TRACKER ========== -->
+  <section id="budget" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="titleCenter">Budget Tracker</div>
+      <div style="width:40px"></div>
+    </div>
+    <div style="margin-top:64px; padding:0 6px">
+      <div class="card">
+        <div style="display:grid; gap:10px">
+          <input id="incomeInput" class="input" type="number" placeholder="Add Income">
+          <input id="expenseInput" class="input" type="number" placeholder="Add Expense">
+          <button class="btn" onclick="addBudget()">Update Budget</button>
+          <div>Total Income: <span id="totalIncome">0</span></div>
+          <div>Total Expenses: <span id="totalExpense">0</span></div>
+          <div class="progress"><div id="budgetBar" class="bar"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SAVINGS GOAL ========== -->
+  <section id="savings" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="titleCenter">Savings Goal</div>
+      <div style="width:40px"></div>
+    </div>
+    <div style="margin-top:64px; padding:0 6px">
+      <div class="card">
+        <div style="display:grid; gap:10px">
+          <input id="goalInput" class="input" type="number" placeholder="Set Goal Amount">
+          <input id="savedInput" class="input" type="number" placeholder="Update Saved Amount">
+          <button class="btn" onclick="updateGoal()">Update Progress</button>
+          <div>Goal: <span id="goalAmount">0</span></div>
+          <div>Saved: <span id="savedAmount">0</span></div>
+          <div class="progress"><div id="goalBar" class="bar"></div></div>
+          <div id="milestoneMsg" style="margin-top:6px; font-weight:700"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== TIPS & FACTS ========== -->
+  <section id="tips" class="screen">
+    <div class="topbar">
+      <div class="iconbtn" onclick="handleBack()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="titleCenter">Tips & Facts</div>
+      <div style="width:40px"></div>
+    </div>
+    <div style="margin-top:64px; padding:0 6px">
+      <div class="card center">
+        <div id="tipBox" style="font-weight:600; font-size:15px">Click below to get a tip!</div>
+        <button class="btn" onclick="showTip()">Show Tip</button>
+      </div>
+    </div>
+  </section>
+
+<div class="homebar"></div>
+</div>
+
+<script>
+/* -------------------------
+   Simple navigation helpers
+   ------------------------- */
+const screens = Array.from(document.querySelectorAll('.screen'));
+function show(id){
+  screens.forEach(s => s.id === id ? s.classList.add('active') : s.classList.remove('active'));
+}
+let navStack = ['welcome'];
+function handleGo(id){
+  navStack.push(id);
+  show(id);
+  onScreenEnter(id);
+}
+function handleBack(){
+  if(navStack.length > 1){ navStack.pop(); const prev = navStack[navStack.length-1]; show(prev); onScreenEnter(prev); }
+  else { show('welcome'); onScreenEnter('welcome'); }
+}
+function onScreenEnter(id){
+  if(id==='home') renderHome();
+  if(id==='profile') renderProfile();
+  if(id==='quiz') renderQuiz();
+  if(id==='flash') loadCard(currentCard);
+  // update user display
+  const n = localStorage.getItem('accu_user') || 'Guest';
+  document.getElementById('userNameDisplay').textContent = n;
+  document.getElementById('profileName').textContent = n;
+}
+
+/* -------------------------
+   Auth (lightweight)
+   ------------------------- */
+function help(){ alert('Support: help@accuquiz.app'); }
+function login(){
+  const n = document.getElementById('loginName').value.trim();
+  if(!n){ alert('Please enter your name.'); return; }
+  localStorage.setItem('accu_user', n);
+  // maintain lastActive date
+  localStorage.setItem('accu_lastActive', new Date().toISOString());
+  handleGo('home');
+}
+function signup(){
+  const n = document.getElementById('suName').value.trim();
+  if(!n){ alert('Please enter your name.'); return; }
+  localStorage.setItem('accu_user', n);
+  localStorage.setItem('accu_lastActive', new Date().toISOString());
+  handleGo('home');
+}
+function doSignOut(){
+  // clear name but keep progress
+  localStorage.removeItem('accu_user');
+  navStack = ['welcome'];
+  show('welcome');
+}
+
+/* -------------------------
+   HOME
+   ------------------------- */
+function renderHome(){
+  const name = localStorage.getItem('accu_user') || 'Guest';
+  document.getElementById('userNameDisplay').textContent = name;
+}
+
+/* stub for folders */
+function tapFolder(i){
+  alert('Folder ' + i + ' opened — (prototype placeholder)');
+}
+
+/* -------------------------
+   FLASHCARDS (improved)
+   ------------------------- */
+const flashcards = [
+  {def:"Money owed to suppliers for goods or services.", term:"Accounts Payable"},
+  {def:"An economic resource you own that provides benefit.", term:"Asset"},
+  {def:"The cost incurred in the process of earning revenue.", term:"Expense"},
+  {def:"Income earned from sales or services.", term:"Revenue"},
+  {def:"Owner's claim after liabilities are deducted (Assets - Liabilities).", term:"Equity"},
+  // Added flashcards:
+  {def:"A record of all transactions affecting a particular item.", term:"Ledger"},
+  {def:"A financial statement showing cash inflows and outflows.", term:"Cash Flow Statement"}
+];
+
+let deck = flashcards.slice();
+let currentCard = 0;
+let studiedCount = parseInt(localStorage.getItem('accu_flashStudied')||'0',10);
+const flashCardEl = document.getElementById('flashCard');
+const flashInner = document.getElementById('flashInner');
+const flashFront = document.getElementById('flashFront');
+const flashBack = document.getElementById('flashBack');
+const flashProgress = document.getElementById('flashProgress');
+
+function loadCard(idx){
+  if(deck.length===0){ deck = flashcards.slice(); }
+  currentCard = ((idx % deck.length) + deck.length) % deck.length;
+  // Remove direct transform reset:
+  // flashInner.style.transform = 'none';
+  flashCardEl.classList.remove('flipped');
+  flashFront.textContent = deck[currentCard].def;
+  flashBack.textContent = deck[currentCard].term;
+  flashProgress.textContent = `Card ${currentCard+1} of ${deck.length}`;
+}
+function flipCard(){
+  flashCardEl.classList.toggle('flipped');
+  // if revealing term, mark studied once per reveal
+  if(flashCardEl.classList.contains('flipped')){
+    studiedCount++;
+    localStorage.setItem('accu_flashStudied', studiedCount);
+  }
+  renderProfile(); // update profile value if open
+}
+function nextCard(){ loadCard(currentCard+1); }
+function prevCard(){ loadCard(currentCard-1); }
+function shuffleDeck(){
+  for(let i=deck.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  loadCard(0);
+}
+
+/* -------------------------
+   QUIZ (polished)
+   ------------------------- */
+const quiz = [
+  { q: "Money owed to suppliers for goods or services is called…",
+    opts: ["Accounts Receivable", "Accounts Payable", "Revenue"],
+    a: 1,
+    explain: "Accounts Payable are short-term debts to suppliers for purchased goods/services." },
+
+  { q: "Which statement shows assets, liabilities, and equity at a date?",
+    opts: ["Balance Sheet", "Cash Flow Statement", "Income Statement"],
+    a: 0,
+    explain: "The balance sheet shows assets, liabilities and owner's equity at a specific point in time." },
+
+  { q: "An economic resource that provides future benefit is called a…",
+    opts: ["Liability", "Asset", "Expense"],
+    a: 1,
+    explain: "An asset provides future economic benefit to the business." },
+
+  // Added quiz questions:
+  { q: "Which statement summarizes cash inflows and outflows?",
+    opts: ["Income Statement", "Cash Flow Statement", "Balance Sheet"],
+    a: 1,
+    explain: "The Cash Flow Statement shows how cash moves in and out of a business." },
+
+  { q: "What is a ledger used for?",
+    opts: ["Tracking inventory", "Recording transactions", "Calculating profit"],
+    a: 1,
+    explain: "A ledger records all transactions affecting a particular item or account." }
+];
+
+let qi = 0, qscore = 0, qLocked = false;
+const qText = document.getElementById('qText');
+const qIndex = document.getElementById('qIndex');
+const qTotal = document.getElementById('qTotal');
+const optsEl = document.getElementById('options');
+const bar = document.getElementById('bar');
+const nextBtn = document.getElementById('nextBtn');
+const scoreLine = document.getElementById('scoreLine');
+const explainEl = document.getElementById('explain');
+const explainToggle = document.getElementById('explainToggle');
+
+qTotal.textContent = quiz.length;
+
+function renderQuiz(){
+  // reset explain visibility
+  explainEl.style.display = 'none';
+  explainToggle.innerText = '💡 Explain';
+  qIndex.textContent = qi+1;
+  const q = quiz[qi];
+  qText.innerText = q.q;
+  optsEl.innerHTML = '';
+  q.opts.forEach((opt, idx) => {
+    const b = document.createElement('div');
+    b.className = 'opt';
+    b.tabIndex = 0;
+    b.innerText = opt;
+    b.onclick = () => selectAnswer(idx, b);
+    b.onkeydown = (e) => { if(e.key==='Enter' || e.key===' ') selectAnswer(idx,b); };
+    optsEl.appendChild(b);
+  });
+  bar.style.width = `${(qi/quiz.length)*100}%`;
+  scoreLine.innerText = `Score: ${qscore}`;
+  qLocked = false;
+  nextBtn.innerText = (qi === quiz.length-1 ? 'Finish' : 'Next');
+}
+
+function selectAnswer(idx, el){
+  if(qLocked) return;
+  qLocked = true;
+  const correct = quiz[qi].a;
+  Array.from(optsEl.children).forEach((node, i) => {
+    node.onclick = null; node.onkeydown = null;
+    if(i === correct) node.classList.add('correct');
+    if(i === idx && i !== correct) node.classList.add('wrong');
+  });
+  if(idx === correct){
+    qscore++;
+    scoreLine.innerText = `✔️ Correct — Score: ${qscore}`;
+  } else {
+    scoreLine.innerText = `❌ Wrong — Score: ${qscore}`;
+  }
+  // show explanation when answered
+  explainEl.innerText = quiz[qi].explain || '';
+  explainEl.style.display = 'block';
+  explainToggle.innerText = '💡 Hide';
+}
+
+function next(){
+  if(qi < quiz.length - 1){
+    qi++; renderQuiz();
+  } else {
+    // complete
+    bar.style.width = '100%';
+    optsEl.innerHTML = '';
+    qText.innerText = 'Quiz complete! 🎉';
+    scoreLine.innerText = `Final score: ${qscore} / ${quiz.length}`;
+    explainEl.style.display = 'block';
+    explainEl.innerText = `You scored ${qscore} out of ${quiz.length}. Great work!`;
+    // Save best score
+    const best = parseInt(localStorage.getItem('accu_bestScore')||'0',10);
+    if(qscore > best) localStorage.setItem('accu_bestScore', String(qscore));
+    // update profile numbers
+    renderProfile();
+    // replace Next button with Back-to-Home option
+    nextBtn.innerText = 'Back to Home';
+    nextBtn.onclick = () => { nextBtn.onclick = next; qi = 0; qscore = 0; renderQuiz(); handleGo('home'); };
+  }
+}
+
+/* explanation toggle */
+function toggleExplain(){
+  if(explainEl.style.display === 'none' || explainEl.style.display === ''){
+    explainEl.style.display = 'block'; explainToggle.innerText = '💡 Hide';
+  } else { explainEl.style.display = 'none'; explainToggle.innerText = '💡 Explain'; }
+}
+
+function restartQuiz(){
+  qi = 0; qscore = 0; nextBtn.onclick = next; renderQuiz();
+}
+
+/* -------------------------
+   PROFILE / PROGRESS
+   ------------------------- */
+function renderProfile(){
+  const name = localStorage.getItem('accu_user') || 'Guest';
+  document.getElementById('profileName').innerText = name;
+  const best = parseInt(localStorage.getItem('accu_bestScore')||'0',10);
+  document.getElementById('profileScore').innerText = best;
+  const studied = parseInt(localStorage.getItem('accu_flashStudied')||'0',10);
+  document.getElementById('flashStudied').innerText = studied;
+  // streak: very simple — count days from lastActive stored
+  const lastActive = localStorage.getItem('accu_lastActive');
+  let streak = parseInt(localStorage.getItem('accu_streak')||'0',10);
+  const today = new Date().toISOString().slice(0,10);
+  if(!lastActive || localStorage.getItem('accu_lastActiveDate') !== today){
+    // increase streak if lastActive date was yesterday, else reset to 1
+    const lastDate = localStorage.getItem('accu_lastActiveDate');
+    if(lastDate){
+      const ld = new Date(lastDate);
+      const next = new Date(ld.getTime() + 24*3600*1000);
+      const nextDate = next.toISOString().slice(0,10);
+      if(nextDate === today) { streak = (streak || 0) + 1; } else { streak = 1; }
+    } else { streak = 1; }
+    localStorage.setItem('accu_streak', String(streak));
+    localStorage.setItem('accu_lastActiveDate', today);
+  }
+  document.getElementById('streak').innerText = streak;
+}
+
+/* reset progress */
+function resetProgress(){
+  if(!confirm('Clear stored progress? This will reset best scores and flashcards count.')) return;
+  localStorage.removeItem('accu_bestScore');
+  localStorage.removeItem('accu_flashStudied');
+  localStorage.removeItem('accu_streak');
+  localStorage.removeItem('accu_lastActiveDate');
+  renderProfile();
+}
+
+/* -------------------------
+   STARTUP: attach keyboard flip on flashcard
+   ------------------------- */
+document.addEventListener('keydown', (e) => {
+  if(document.querySelector('#flash').classList.contains('active')){
+    if(e.key === 'ArrowRight') nextCard();
+    if(e.key === 'ArrowLeft') prevCard();
+    if(e.key === ' ') { e.preventDefault(); flipCard(); }
+  }
+});
+
+/* Initialize app state and render first screens */
+function init(){
+  const storedName = localStorage.getItem('accu_user');
+  if(storedName) { navStack = ['home']; show('home'); } else { navStack = ['welcome']; show('welcome'); }
+  onScreenEnter(navStack[navStack.length-1]);
+  loadCard(0); renderQuiz(); renderProfile();
+  // ensure keys exist
+  if(!localStorage.getItem('accu_flashStudied')) localStorage.setItem('accu_flashStudied','0');
+  if(!localStorage.getItem('accu_bestScore')) localStorage.setItem('accu_bestScore','0');
+}
+init();
+
+// ----------------------
+// NEW FEATURE FUNCTIONS
+// ----------------------
+let income=0,expense=0;
+function addBudget(){
+  const inc=parseFloat(document.getElementById('incomeInput').value)||0;
+  const exp=parseFloat(document.getElementById('expenseInput').value)||0;
+  income+=inc; expense+=exp;
+  document.getElementById('totalIncome').innerText=income;
+  document.getElementById('totalExpense').innerText=expense;
+  const ratio=income>0?Math.min((expense/income)*100,100):0;
+  document.getElementById('budgetBar').style.width=ratio+"%";
+}
+
+let goal=0,saved=0;
+function updateGoal(){
+  goal=parseFloat(document.getElementById('goalInput').value)||goal;
+  saved=parseFloat(document.getElementById('savedInput').value)||saved;
+  document.getElementById('goalAmount').innerText=goal;
+  document.getElementById('savedAmount').innerText=saved;
+  const ratio=goal>0?Math.min((saved/goal)*100,100):0;
+  document.getElementById('goalBar').style.width=ratio+"%";
+  let msg="";
+  if(ratio===100) msg="🏆 Goal Achieved!";
+  else if(ratio>=75) msg="🥇 Almost there!";
+  else if(ratio>=50) msg="🥈 Halfway!";
+  else if(ratio>=25) msg="🥉 Good start!";
+  document.getElementById('milestoneMsg').innerText=msg;
+}
+
+const tips=[
+ "Save at least 20% of your income.",
+ "Track daily expenses to spot leaks.",
+ "Avoid debt for non-essentials.",
+ "Set short-term goals for motivation.",
+ "Invest early to benefit from compounding."
+];
+function showTip(){
+  const tip=tips[Math.floor(Math.random()*tips.length)];
+  document.getElementById('tipBox').innerText=tip;
+}
+
+</script>
+</body>
+</html>
